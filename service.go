@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	ip   string
+	host string
 	port string
 )
 
 func main() {
 	tcpServer := brts.Create(getTCPAddress())
 	tcpServer.SetTimeout(3 * time.Minute)
+	tcpServer.SetMessageDelim(']')
 
 	tcpServer.OnServerStarted(func(addr *net.TCPAddr) {
 		log.Printf("Q50Watch telemetry server started on address: %v", addr.String())
@@ -31,7 +32,7 @@ func main() {
 		log.Printf("accepted connection from: %v", c.Conn.RemoteAddr())
 	})
 
-	tcpServer.OnMessageReceive(func(c *brts.Client, data []byte) {
+	tcpServer.OnMessageReceive(func(c *brts.Client, data *[]byte) {
 
 	})
 
@@ -46,11 +47,11 @@ func main() {
 }
 
 func init() {
-	flag.StringVar(&ip, "ip", "localhost", "usage -ip=127.0.0.1")
-	flag.StringVar(&port, "port", "8002", "usage -port=8002")
+	flag.StringVar(&host, "host", "127.0.0.1", "-host=127.0.0.1")
+	flag.StringVar(&port, "port", "8002", "-port=8002")
 	flag.Parse()
 }
 
 func getTCPAddress() string {
-	return ip + ":" + port
+	return host + ":" + port
 }

@@ -33,7 +33,7 @@ func main() {
 	})
 
 	tcpServer.OnMessageReceive(func(c *brts.Client, data *[]byte) {
-
+		
 	})
 
 	tcpServer.OnConnectionLost(func(c *brts.Client) {

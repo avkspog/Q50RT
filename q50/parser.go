@@ -33,7 +33,9 @@ func Parse(data *[]byte) (packet *Packet, err error) {
 	pack := new(Packet)
 	text := strings.Trim(string(*data), " ")
 
-	if strings.Index(text, "[") == -1 {
+	bktIndex := strings.Index(text, "[")
+
+	if bktIndex == -1 || bktIndex != 0 {
 		packet = nil
 		err = errors.New("Expected [")
 		return
@@ -52,6 +54,13 @@ func Parse(data *[]byte) (packet *Packet, err error) {
 
 	for _, v := range f {
 		messageFields := strings.FieldsFunc(v, fieldsAstFunc)
+
+		if len(messageFields) < 7 {
+			packet = nil
+			err = errors.New("Broken message")
+			return
+		}
+
 		message := new(Message)
 		message.MessageType = messageFields[3]
 		message.NetType = messageFields[0]

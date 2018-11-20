@@ -24,10 +24,30 @@ var packetTests = []testStruct{
 		err:      "packet.ID != test.ID",
 	},
 	{
+		TestName: "Broken message 1",
+		Message:  "3G*1234567890*000D*LK,23201,0,78]",
+		err:      "Expected [",
+	},
+	{
+		TestName: "Broken message 2",
+		Message:  "ghjad*3G*sf dkfjdf* hjf[ adsf*LK* adsf asdf] df asdffd623]",
+		err:      "Expected [",
+	},
+	{
+		TestName: "Broken message 3",
+		Message:  "[ghjad*3G*sf dkfjdf* hjf[ adsf*LK* adsf asdf] df asdffd623",
+		err:      "Broken message",
+	},
+	{
 		TestName:     "Messages count 1",
 		Message:      "[3G*1234567890*000D*LK,23201,0,78]",
 		MessageCount: 1,
 		err:          "Messages count != 1",
+	},
+	{
+		TestName: "Broken message 4",
+		Message:  "[3G*1234567890*000D*LK00000078]",
+		err:      "Broken message",
 	},
 }
 
@@ -38,7 +58,9 @@ func TestPacket(t *testing.T) {
 			packet, err := Parse(&b)
 
 			if err != nil {
-				t.Error(err)
+				if err.Error() != test.err {
+					t.Error(err)
+				}
 			}
 
 			if test.ID != 0 && packet.ID != test.ID {

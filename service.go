@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Q50RT/q50"
 	"flag"
 	"log"
 	"net"
@@ -14,6 +15,12 @@ var (
 	host string
 	port string
 )
+
+func init() {
+	flag.StringVar(&host, "host", "127.0.0.1", "-host=127.0.0.1")
+	flag.StringVar(&port, "port", "8002", "-port=8002")
+	flag.Parse()
+}
 
 func main() {
 	tcpServer := brts.Create(getTCPAddress())
@@ -33,7 +40,7 @@ func main() {
 	})
 
 	tcpServer.OnMessageReceive(func(c *brts.Client, data *[]byte) {
-		
+		go process(data)
 	})
 
 	tcpServer.OnConnectionLost(func(c *brts.Client) {
@@ -46,10 +53,13 @@ func main() {
 	}
 }
 
-func init() {
-	flag.StringVar(&host, "host", "127.0.0.1", "-host=127.0.0.1")
-	flag.StringVar(&port, "port", "8002", "-port=8002")
-	flag.Parse()
+func process(data *[]byte) {
+	packet, err := q50.Parse(data)
+	if err != nil {
+		log.Printf("Packet error: %s", err)
+		return
+	}
+
 }
 
 func getTCPAddress() string {

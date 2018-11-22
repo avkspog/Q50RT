@@ -3,6 +3,7 @@ package q50
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +22,6 @@ type Message struct {
 	ReceiveTime    time.Time
 	DeviceTime     time.Time
 	Location
-	errors []error
 }
 
 type Location struct {
@@ -29,16 +29,66 @@ type Location struct {
 	Longitude float64
 }
 
-func Parse(data *[]byte) (packet *Packet, err error) {
+const (
+	LK     = "LK"
+	UD     = "UD"
+	UD2    = "UD2"
+	CONFIG = "CONFIG"
+)
+
+func LastMessage(data *[]byte) (*Message, error) {
+	packet, err := parse(data)
+	if err != nil {
+		return nil, err
+	}
+
+	message := new(Message)
+
+	sortedMessages := make(messageSlice, 0, len(packet.Messages))
+	for _, m := range packet.Messages {
+		sortedMessages = append(sortedMessages, m)
+	}
+
+	sort.Sort(messageSlice(sortedMessages))
+	msg := sortedMessages[0]
+	if msg != nil {
+		if msg.MessageType == UD || msg.MessageType == UD2 {
+			message.DeviceTime = msg.DeviceTime
+			message.ReceiveTime = msg.ReceiveTime
+			message.Latitude = msg.Latitude
+			message.Longitude = msg.Longitude
+		}
+	}
+
+	for _, m := range sortedMessages {
+		if m.MessageType == LK {
+			message.ID = msg.ID
+			message.MessageType = m.MessageType
+			message.NetType = m.NetType
+			message.BatteryPercent = m.BatteryPercent
+			break
+		}
+	}
+
+	return message, nil
+}
+
+func Parse(data *[]byte) (*Packet, error) {
+	if len(*data) == 0 {
+		return nil, errors.New("No data")
+	}
+
+	return parse(data)
+}
+
+func parse(data *[]byte) (*Packet, error) {
 	pack := new(Packet)
 	text := strings.Trim(string(*data), " ")
 
 	bktIndex := strings.Index(text, "[")
 
 	if bktIndex == -1 || bktIndex != 0 {
-		packet = nil
-		err = errors.New("Expected [")
-		return
+		return nil, errors.New("Expected [")
 	}
 
 	fieldsBktFunc := func(r rune) bool {
@@ -56,9 +106,7 @@ func Parse(data *[]byte) (packet *Packet, err error) {
 		messageFields := strings.FieldsFunc(v, fieldsAstFunc)
 
 		if len(messageFields) < 7 {
-			packet = nil
-			err = errors.New("Broken message")
-			return
+			return nil, errors.New("Broken message")
 		}
 
 		message := new(Message)
@@ -72,21 +120,19 @@ func Parse(data *[]byte) (packet *Packet, err error) {
 		}
 
 		switch message.MessageType {
-		case "LK":
+		case LK:
 			parseLK(message, messageFields)
-		case "UD":
+		case UD:
 			parseUD(message, messageFields)
-		case "UD2":
+		case UD2:
 			parseUD(message, messageFields)
-		case "CONFIG":
+		case CONFIG:
 			parseCONFIG(message, messageFields)
 		}
 		pack.addMessage(message)
 	}
 
-	packet = pack
-	err = nil
-	return
+	return pack, nil
 }
 
 func parseLK(message *Message, messageFields []string) {
@@ -109,15 +155,13 @@ func parseUD(message *Message, messageFields []string) {
 	message.DeviceTime, _ = time.Parse(time.RFC3339, sb.String())
 
 	if messageFields[8] == "N" {
-		n, err := toFloat(messageFields[7])
+		n, _ := toFloat(messageFields[7])
 		message.Latitude = n
-		message.appendErr(err)
 	}
 
 	if messageFields[10] == "E" {
-		n, err := toFloat(messageFields[9])
+		n, _ := toFloat(messageFields[9])
 		message.Longitude = n
-		message.appendErr(err)
 	}
 }
 
@@ -142,14 +186,22 @@ func toFloat(v string) (float64, error) {
 	return n, nil
 }
 
-func (m *Message) appendErr(err error) {
-	if err != nil {
-		m.errors = append(m.errors, err)
-	}
-}
-
 func (p *Packet) addMessage(msg *Message) {
 	if msg != nil {
 		p.Messages = append(p.Messages, msg)
 	}
+}
+
+type messageSlice []*Message
+
+func (p messageSlice) Len() int {
+	return len(p)
+}
+
+func (p messageSlice) Less(i, j int) bool {
+	return p[i].DeviceTime.After(p[j].DeviceTime)
+}
+
+func (p messageSlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }

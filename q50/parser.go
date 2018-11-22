@@ -86,9 +86,13 @@ func parse(data *[]byte) (*Packet, error) {
 	text := strings.Trim(string(*data), " ")
 
 	bktIndex := strings.Index(text, "[")
-
 	if bktIndex == -1 || bktIndex != 0 {
 		return nil, errors.New("Expected [")
+	}
+
+	lastBktIndex := strings.LastIndex(text, "]") + 1
+	if lastBktIndex == -1 || lastBktIndex < len(text) {
+		return nil, errors.New("Expected last ]")
 	}
 
 	fieldsBktFunc := func(r rune) bool {
@@ -103,6 +107,10 @@ func parse(data *[]byte) (*Packet, error) {
 	currentTime := time.Now()
 
 	for _, v := range f {
+		if strings.Trim(v, " ") == "" {
+			continue
+		}
+
 		messageFields := strings.FieldsFunc(v, fieldsAstFunc)
 
 		if len(messageFields) < 7 {

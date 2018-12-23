@@ -53,6 +53,7 @@ func LastMessage(data *[]byte) (*Message, error) {
 	msg := sortedMessages[0]
 	if msg != nil {
 		if msg.MessageType == UD || msg.MessageType == UD2 {
+			message.MessageType = msg.MessageType
 			message.DeviceTime = msg.DeviceTime
 			message.ReceiveTime = msg.ReceiveTime
 			message.Latitude = msg.Latitude

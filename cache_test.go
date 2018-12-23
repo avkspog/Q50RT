@@ -44,4 +44,12 @@ func TestCacheTimeout(t *testing.T) {
 		t.Error("exp_1_sec doesn't expired", v)
 	}
 
+	cache.SetExp(2, "exp_2_sec", 2*time.Second)
+
+	<-time.After(6 * time.Second)
+	v, found = cache.Get(2)
+	if found || v != nil {
+		t.Error("exp_2_sec doesn't expired", v)
+	}
+
 }

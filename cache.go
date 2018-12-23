@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"time"
@@ -101,7 +100,6 @@ func (c *Cache) DeleteExpired() {
 	c.mu.Lock()
 	for k, item := range c.items {
 		if timeNow > item.Expiration {
-			fmt.Printf("Удалена запись с ключом %v", k)
 			delete(c.items, k)
 		}
 	}
@@ -115,7 +113,6 @@ func run(c *Cache) {
 		case <-ticker.C:
 			c.DeleteExpired()
 		case <-c.stopCleaner:
-			fmt.Println("Очистка кеша остановлена")
 			ticker.Stop()
 			return
 		}

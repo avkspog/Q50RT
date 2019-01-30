@@ -8,7 +8,7 @@ import (
 
 type Cache struct {
 	mu          *sync.RWMutex
-	items       map[int]Item
+	Items       map[int]Item
 	stopCleaner chan struct{}
 }
 
@@ -18,19 +18,19 @@ type Item struct {
 }
 
 const (
-	DefaultExpiration      time.Duration = 24 * time.Hour
-	DefaultCleanupInterval time.Duration = 5 * time.Second
+	DefaultExpiration      = 24 * time.Hour
+	DefaultCleanupInterval = 5 * time.Second
 )
 
-func newCache() *Cache {
+func NewCache() *Cache {
 	cache := &Cache{
 		mu:          &sync.RWMutex{},
-		items:       make(map[int]Item),
+		Items:       make(map[int]Item),
 		stopCleaner: make(chan struct{}),
 	}
 
-	go run(cache)
-	runtime.SetFinalizer(cache, stop)
+	go runCleaner(cache)
+	runtime.SetFinalizer(cache, stopCleaner)
 
 	return cache
 }
@@ -55,7 +55,7 @@ func (c *Cache) set(key int, object interface{}, expiration time.Duration) {
 	}
 
 	c.mu.Lock()
-	c.items[key] = Item{
+	c.Items[key] = Item{
 		Value:      object,
 		Expiration: time.Now().Add(exp).UnixNano(),
 	}
@@ -64,7 +64,7 @@ func (c *Cache) set(key int, object interface{}, expiration time.Duration) {
 
 func (c *Cache) Get(key int) (interface{}, bool) {
 	c.mu.RLock()
-	item, found := c.items[key]
+	item, found := c.Items[key]
 	if !found {
 		c.mu.RUnlock()
 		return nil, false
@@ -81,9 +81,9 @@ func (c *Cache) Get(key int) (interface{}, bool) {
 
 func (c *Cache) Delete(key int) {
 	c.mu.Lock()
-	_, found := c.items[key]
+	_, found := c.Items[key]
 	if found {
-		delete(c.items, key)
+		delete(c.Items, key)
 	}
 	c.mu.Unlock()
 }
@@ -98,15 +98,15 @@ func (item Item) Expired() bool {
 func (c *Cache) DeleteExpired() {
 	timeNow := time.Now().UnixNano()
 	c.mu.Lock()
-	for k, item := range c.items {
+	for k, item := range c.Items {
 		if timeNow > item.Expiration {
-			delete(c.items, k)
+			delete(c.Items, k)
 		}
 	}
 	c.mu.Unlock()
 }
 
-func run(c *Cache) {
+func runCleaner(c *Cache) {
 	ticker := time.NewTicker(DefaultCleanupInterval)
 	for {
 		select {
@@ -119,6 +119,6 @@ func run(c *Cache) {
 	}
 }
 
-func stop(c *Cache) {
+func stopCleaner(c *Cache) {
 	c.stopCleaner <- struct{}{}
 }

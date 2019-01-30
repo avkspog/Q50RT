@@ -6,7 +6,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	cache := newCache()
+	cache := NewCache()
 
 	v, found := cache.Get(1234567890)
 	if found || v != nil {
@@ -28,7 +28,7 @@ func TestCache(t *testing.T) {
 }
 
 func TestCacheTimeout(t *testing.T) {
-	cache := newCache()
+	cache := NewCache()
 
 	cache.SetExp(123456789, "exp_1_sec", 100*time.Millisecond)
 
@@ -46,7 +46,7 @@ func TestCacheTimeout(t *testing.T) {
 
 	cache.SetExp(2, "exp_2_sec", 2*time.Second)
 
-	<-time.After(6 * time.Second)
+	<-time.After(3 * time.Second)
 	v, found = cache.Get(2)
 	if found || v != nil {
 		t.Error("exp_2_sec doesn't expired", v)

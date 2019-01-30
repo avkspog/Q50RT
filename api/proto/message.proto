@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package proto;
+
+service routePoint {
+
+    rpc LastPoint (Identifier) returns (Point) {
+    }
+
+    rpc CacheSize (CacheCommand) returns (CacheResponse) {
+    }
+
+    rpc ServerStatistic (ServerCommand) returns (ServerResponse) {
+    }
+
+    rpc Ping (PingCommand) returns (PingCommand) {
+    }
+}
+
+message Identifier {
+    int32 version = 1;
+    int32 clientId = 2;
+}
+
+message Point {
+    fixed32 version = 1;
+    string messageType = 2;
+    string netType = 3;
+    fixed32 deviceId = 4;
+    fixed32 batteryPercent = 5;
+    int64 receiveTime = 6;
+    int64 deviceTime = 7;
+    double latitude = 8;
+    double longitude = 9;
+}
+
+message CacheCommand {
+    fixed32 version = 1;
+    string command = 2;
+}
+
+message CacheResponse {
+    fixed32 version = 1;
+    int64 cacheSize = 2;
+}
+
+message ServerCommand {
+    fixed32 version = 1;
+    string command = 2;
+}
+
+message ServerResponse {
+    fixed32 version = 1;
+
+    message Statistic {
+        string type = 2;
+        string value = 3;
+    }
+
+    repeated Statistic ServerStatistics = 4;
+}
+
+
+message PingCommand {
+    string message = 1;
+}

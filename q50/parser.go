@@ -3,31 +3,10 @@ package q50
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
-
-type Packet struct {
-	ID       int
-	Messages []*Message
-}
-
-type Message struct {
-	MessageType    string
-	NetType        string
-	ID             int
-	BatteryPercent uint8
-	ReceiveTime    time.Time
-	DeviceTime     time.Time
-	Location
-}
-
-type Location struct {
-	Latitude  float64
-	Longitude float64
-}
 
 const (
 	LK     = "LK"
@@ -36,64 +15,36 @@ const (
 	CONFIG = "CONFIG"
 )
 
-func LastMessage(data *[]byte) (*Message, error) {
-	packet, err := parse(data)
-	if err != nil {
-		return nil, err
-	}
-
-	message := new(Message)
-
-	sortedMessages := make(messageSlice, 0, len(packet.Messages))
-	for _, m := range packet.Messages {
-		sortedMessages = append(sortedMessages, m)
-	}
-
-	sort.Sort(messageSlice(sortedMessages))
-	msg := sortedMessages[0]
-	if msg != nil {
-		if msg.MessageType == UD || msg.MessageType == UD2 {
-			message.MessageType = msg.MessageType
-			message.DeviceTime = msg.DeviceTime
-			message.ReceiveTime = msg.ReceiveTime
-			message.Latitude = msg.Latitude
-			message.Longitude = msg.Longitude
-		}
-	}
-
-	for _, m := range sortedMessages {
-		if m.MessageType == LK {
-			message.ID = msg.ID
-			message.MessageType = m.MessageType
-			message.NetType = m.NetType
-			message.BatteryPercent = m.BatteryPercent
-			break
-		}
-	}
-
-	return message, nil
+type Message struct {
+	MessageType    string
+	NetType        string
+	ID             int
+	BatteryPercent uint8
+	ReceiveTime    time.Time
+	DeviceTime     time.Time
+	Latitude       float64
+	Longitude      float64
 }
 
-func Parse(data *[]byte) (*Packet, error) {
+func Parse(data *[]byte) (*Message, error) {
 	if len(*data) == 0 {
-		return nil, errors.New("No data")
+		return nil, errors.New("no data")
 	}
 
-	return parse(data)
-}
-
-func parse(data *[]byte) (*Packet, error) {
-	pack := new(Packet)
 	text := strings.Trim(string(*data), " ")
 
-	bktIndex := strings.Index(text, "[")
-	if bktIndex == -1 || bktIndex != 0 {
-		return nil, errors.New("Expected [")
+	if len(text) < 10 {
+		return nil, errors.New("broken message")
 	}
 
-	lastBktIndex := strings.LastIndex(text, "]") + 1
-	if lastBktIndex == -1 || lastBktIndex < len(text) {
-		return nil, errors.New("Expected last ]")
+	bktIndex := strings.Index(text, "[")
+	if bktIndex != 0 {
+		return nil, errors.New("expected [")
+	}
+
+	lastBktIndex := strings.LastIndex(text, "]")
+	if lastBktIndex == -1 {
+		return nil, errors.New("expected last ]")
 	}
 
 	fieldsBktFunc := func(r rune) bool {
@@ -105,8 +56,7 @@ func parse(data *[]byte) (*Packet, error) {
 		return r == '*' || r == ','
 	}
 
-	currentTime := time.Now()
-
+	message := new(Message)
 	for _, v := range f {
 		if strings.Trim(v, " ") == "" {
 			continue
@@ -115,16 +65,14 @@ func parse(data *[]byte) (*Packet, error) {
 		messageFields := strings.FieldsFunc(v, fieldsAstFunc)
 
 		if len(messageFields) < 7 {
-			return nil, errors.New("Broken message")
+			continue
 		}
 
-		message := new(Message)
 		message.MessageType = messageFields[3]
 		message.NetType = messageFields[0]
-		message.ReceiveTime = currentTime
+		message.ReceiveTime = time.Now()
 		id, err := strconv.Atoi(messageFields[1])
 		if err == nil {
-			pack.ID = id
 			message.ID = id
 		}
 
@@ -138,10 +86,9 @@ func parse(data *[]byte) (*Packet, error) {
 		case CONFIG:
 			parseCONFIG(message, messageFields)
 		}
-		pack.addMessage(message)
 	}
 
-	return pack, nil
+	return message, nil
 }
 
 func parseLK(message *Message, messageFields []string) {
@@ -156,12 +103,11 @@ func parseUD(message *Message, messageFields []string) {
 	//[3G*1234567890*00A0*UD,051118,091654,V,00.000000,N,00.0000000,E,0.00,0.0,0.0,0,28,75,23282,0,00000008,4,255,250,1,46612,6762,122,46612,6761,128,46612,1562,117,46612,1561,113,0,36.6]
 	rawDate := messageFields[4]
 	rawTime := messageFields[5]
-	var sb strings.Builder
 
-	fmt.Fprintf(&sb, "20%s-%s-%sT%s:%s:%s.000Z", rawDate[4:], rawDate[2:len(rawDate)-2], rawDate[0:2],
+	sb := fmt.Sprintf("20%s-%s-%sT%s:%s:%s.000Z", rawDate[4:], rawDate[2:len(rawDate)-2], rawDate[0:2],
 		rawTime[0:2], rawTime[2:len(rawTime)-2], rawTime[4:])
 
-	message.DeviceTime, _ = time.Parse(time.RFC3339, sb.String())
+	message.DeviceTime, _ = time.Parse(time.RFC3339, sb)
 
 	if messageFields[8] == "N" {
 		n, _ := toFloat(messageFields[7])
@@ -185,7 +131,7 @@ func parseCONFIG(message *Message, messageFields []string) {
 func toFloat(v string) (float64, error) {
 	vt := strings.Trim(v, " ")
 	if len(vt) == 0 || vt == "" {
-		return 0, errors.New("Value is empty")
+		return 0, errors.New("value is empty")
 	}
 
 	n, err := strconv.ParseFloat(vt, 64)
@@ -193,24 +139,4 @@ func toFloat(v string) (float64, error) {
 		return 0, err
 	}
 	return n, nil
-}
-
-func (p *Packet) addMessage(msg *Message) {
-	if msg != nil {
-		p.Messages = append(p.Messages, msg)
-	}
-}
-
-type messageSlice []*Message
-
-func (p messageSlice) Len() int {
-	return len(p)
-}
-
-func (p messageSlice) Less(i, j int) bool {
-	return p[i].DeviceTime.After(p[j].DeviceTime)
-}
-
-func (p messageSlice) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
 }

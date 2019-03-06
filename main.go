@@ -59,7 +59,6 @@ func main() {
 		},
 	}
 	starter.run()
-	starter.waitGroup.Wait()
 }
 
 func (s *Starter) run() {
@@ -69,4 +68,5 @@ func (s *Starter) run() {
 	s.waitGroup.Add(2)
 	s.onStartTelemetryServer(tlmAddr, s.waitGroup)
 	s.onStartApiService(apiAddr, s.waitGroup)
+	s.waitGroup.Wait()
 }

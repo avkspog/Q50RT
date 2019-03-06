@@ -36,7 +36,6 @@ type Starter struct {
 }
 
 func main() {
-
 	f, err := os.OpenFile(LogFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
 	if err != nil {
 		fmt.Printf("error opening file: %v", err)
@@ -52,9 +51,12 @@ func main() {
 	starter := &Starter{
 		waitGroup: &sync.WaitGroup{},
 		onStartTelemetryServer: func(addr string, wg *sync.WaitGroup) {
+			wg.Add(1)
 			go startTelemetryServer(addr, wg)
 		},
 		onStartApiService: func(addr string, wg *sync.WaitGroup) {
+			wg.Add(1)
+			//go startApiServer()
 			wg.Done()
 		},
 	}
@@ -65,7 +67,6 @@ func (s *Starter) run() {
 	tlmAddr := host + ":" + telemetryPort
 	apiAddr := host + ":" + gRPCPort
 
-	s.waitGroup.Add(2)
 	s.onStartTelemetryServer(tlmAddr, s.waitGroup)
 	s.onStartApiService(apiAddr, s.waitGroup)
 	s.waitGroup.Wait()

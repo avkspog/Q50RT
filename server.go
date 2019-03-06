@@ -6,11 +6,13 @@ import (
 	"github.com/avkspog/brts"
 	"log"
 	"net"
-	"os"
+	"sync"
 	"time"
 )
 
-func StartTelemetryServer(addr string) {
+func startTelemetryServer(addr string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	tcpServer := brts.Create(addr)
 	tcpServer.SetTimeout(3 * time.Minute)
 	tcpServer.SetMessageDelim(']')
@@ -39,7 +41,6 @@ func StartTelemetryServer(addr string) {
 
 	if err := tcpServer.Start(); err != nil {
 		log.Printf("Fatal error: %s", err.Error())
-		os.Exit(1)
 	}
 }
 
@@ -63,12 +64,6 @@ func process(data *[]byte) {
 	cmsg, ok := LocalCache.Get(message.ID)
 	if ok {
 		cachedMessage := cmsg.(*q50.Message)
-
-		//if cachedMessage.DeviceTime.Before(message.DeviceTime) {
-		//	log.Printf("message device time before cached message time: %s", message.DeviceTime)
-		//	return
-		//}
-
 		cachedMessage.MessageType = message.MessageType
 		cachedMessage.NetType = message.NetType
 		cachedMessage.ReceiveTime = message.ReceiveTime

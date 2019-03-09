@@ -1,13 +1,10 @@
 syntax = "proto3";
 
-package proto;
+package api;
 
 service routePoint {
 
     rpc LastPoint (Identifier) returns (Point) {
-    }
-
-    rpc CacheSize (CacheCommand) returns (CacheResponse) {
     }
 
     rpc ServerStatistic (ServerCommand) returns (ServerResponse) {
@@ -34,16 +31,6 @@ message Point {
     double longitude = 9;
 }
 
-message CacheCommand {
-    fixed32 version = 1;
-    string command = 2;
-}
-
-message CacheResponse {
-    fixed32 version = 1;
-    int64 cacheSize = 2;
-}
-
 message ServerCommand {
     fixed32 version = 1;
     string command = 2;
@@ -59,7 +46,6 @@ message ServerResponse {
 
     repeated Statistic ServerStatistics = 4;
 }
-
 
 message PingCommand {
     string message = 1;

@@ -1,7 +1,7 @@
-package api
+package main
 
 import (
-	pb "Q50RT/api/proto"
+	pb "Q50RT/api"
 	"context"
 )
 

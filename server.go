@@ -3,22 +3,23 @@ package main
 import (
 	"Q50RT/q50"
 	"fmt"
-	"github.com/avkspog/brts"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/avkspog/brts"
 )
 
-func startTelemetryServer(addr string, wg *sync.WaitGroup) {
+func startTelemetryServer(serverConfig *ServerConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	tcpServer := brts.Create(addr)
+	tcpServer := brts.Create(serverConfig.telemetryAddr())
 	tcpServer.SetTimeout(3 * time.Minute)
 	tcpServer.SetMessageDelim(']')
 
 	tcpServer.OnServerStarted(func(addr *net.TCPAddr) {
-		log.Printf("Q50Watch telemetry server v%s started on address: %v", Version, addr.String())
+		log.Printf("Q50Watch telemetry server v%s started on address: %v", serverConfig.Version, addr.String())
 	})
 
 	tcpServer.OnServerStopped(func() {

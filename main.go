@@ -9,34 +9,40 @@ import (
 	"sync"
 )
 
-const (
-	Version     = "0.0.1.12"
-	LogFileName = "q50tlm.log"
-)
-
-var (
-	host          = "127.0.0.1"
-	telemetryPort = "8002"
-	gRPCPort      = "9002"
-)
-
-func init() {
-	flag.StringVar(&host, "host", "127.0.0.1", "-host=127.0.0.1")
-	flag.StringVar(&telemetryPort, "tlm_port", "8002", "-tlm_port=8002")
-	flag.StringVar(&gRPCPort, "grpc_port", "9002", "-grpc_port=9002")
-	flag.Parse()
+type ServerConfig struct {
+	Host          string
+	TelemetryPort string
+	APIPort       string
+	Version       string
+	LogFileName   string
 }
-
-var LocalCache *Cache
 
 type Starter struct {
 	waitGroup              *sync.WaitGroup
-	onStartTelemetryServer func(addr string, wg *sync.WaitGroup)
-	onStartApiService      func(addr string, wg *sync.WaitGroup)
+	onStartTelemetryServer func(wg *sync.WaitGroup)
+	onStartAPIService      func(wg *sync.WaitGroup)
+}
+
+var serverConfig *ServerConfig
+
+var LocalCache *Cache
+
+func init() {
+	serverConfig = new(ServerConfig)
+	serverConfig.Version = "0.0.1.12"
+	serverConfig.LogFileName = "q50tlm.log"
+	serverConfig.Host = "127.0.0.1"
+	serverConfig.TelemetryPort = "30731"
+	serverConfig.APIPort = "30732"
+
+	flag.StringVar(&serverConfig.Host, "host", "127.0.0.1", "-host=127.0.0.1")
+	flag.StringVar(&serverConfig.TelemetryPort, "tlm_port", "30731", "-tlm_port=30731")
+	flag.StringVar(&serverConfig.APIPort, "api_port", "30732", "-api_port=30732")
+	flag.Parse()
 }
 
 func main() {
-	f, err := os.OpenFile(LogFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
+	f, err := os.OpenFile(serverConfig.LogFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
 	if err != nil {
 		fmt.Printf("error opening file: %v", err)
 	}
@@ -50,13 +56,13 @@ func main() {
 
 	starter := &Starter{
 		waitGroup: &sync.WaitGroup{},
-		onStartTelemetryServer: func(addr string, wg *sync.WaitGroup) {
+		onStartTelemetryServer: func(wg *sync.WaitGroup) {
 			wg.Add(1)
-			go startTelemetryServer(addr, wg)
+			go startTelemetryServer(serverConfig, wg)
 		},
-		onStartApiService: func(addr string, wg *sync.WaitGroup) {
+		onStartAPIService: func(wg *sync.WaitGroup) {
 			wg.Add(1)
-			//go startApiServer()
+			fmt.Println("api server test start")
 			wg.Done()
 		},
 	}
@@ -64,10 +70,15 @@ func main() {
 }
 
 func (s *Starter) run() {
-	tlmAddr := host + ":" + telemetryPort
-	apiAddr := host + ":" + gRPCPort
-
-	s.onStartTelemetryServer(tlmAddr, s.waitGroup)
-	s.onStartApiService(apiAddr, s.waitGroup)
+	s.onStartTelemetryServer(s.waitGroup)
+	s.onStartAPIService(s.waitGroup)
 	s.waitGroup.Wait()
+}
+
+func (c *ServerConfig) telemetryAddr() string {
+	return c.Host + ":" + c.TelemetryPort
+}
+
+func (c *ServerConfig) APIAddr() string {
+	return c.Host + ":" + c.APIPort
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/avkspog/brts"
 )
 
-func startTelemetryServer(serverConfig *ServerConfig, wg *sync.WaitGroup) {
+func StartTelemetryServer(serverConfig *ServerConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	tcpServer := brts.Create(serverConfig.telemetryAddr())
@@ -57,8 +57,8 @@ func process(data *[]byte) {
 		return
 	}
 
-	if message.ID == 0 {
-		log.Println("message id is zero")
+	if len(message.ID) == 0 {
+		log.Println("message id is empty")
 		return
 	}
 

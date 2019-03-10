@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"sync"
 )
 
 type ServerConfig struct {
-	Host          string
-	TelemetryPort string
-	APIPort       string
-	Version       string
-	LogFileName   string
+	Host            string
+	TelemetryPort   string
+	APIPort         string
+	Version         string
+	ProtocolVersion string
+	LogFileName     string
 }
 
 type Starter struct {
@@ -30,6 +32,7 @@ var LocalCache *Cache
 func init() {
 	serverConfig = new(ServerConfig)
 	serverConfig.Version = "0.0.1.12"
+	serverConfig.ProtocolVersion = "1"
 	serverConfig.LogFileName = "q50tlm.log"
 	serverConfig.Host = "127.0.0.1"
 	serverConfig.TelemetryPort = "30731"
@@ -58,12 +61,11 @@ func main() {
 		waitGroup: &sync.WaitGroup{},
 		onStartTelemetryServer: func(wg *sync.WaitGroup) {
 			wg.Add(1)
-			go startTelemetryServer(serverConfig, wg)
+			go StartTelemetryServer(serverConfig, wg)
 		},
 		onStartAPIService: func(wg *sync.WaitGroup) {
 			wg.Add(1)
-			fmt.Println("api server test start")
-			wg.Done()
+			go StartAPIServer(serverConfig, wg)
 		},
 	}
 	starter.run()
@@ -76,9 +78,9 @@ func (s *Starter) run() {
 }
 
 func (c *ServerConfig) telemetryAddr() string {
-	return c.Host + ":" + c.TelemetryPort
+	return net.JoinHostPort(c.Host, c.TelemetryPort)
 }
 
 func (c *ServerConfig) APIAddr() string {
-	return c.Host + ":" + c.APIPort
+	return net.JoinHostPort(c.Host, c.APIPort)
 }

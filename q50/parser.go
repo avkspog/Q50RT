@@ -18,7 +18,7 @@ const (
 type Message struct {
 	MessageType    string
 	NetType        string
-	ID             int
+	ID             string
 	BatteryPercent uint8
 	ReceiveTime    time.Time
 	DeviceTime     time.Time
@@ -68,13 +68,14 @@ func Parse(data *[]byte) (*Message, error) {
 			continue
 		}
 
-		message.MessageType = messageFields[3]
-		message.NetType = messageFields[0]
-		message.ReceiveTime = time.Now()
-		id, err := strconv.Atoi(messageFields[1])
-		if err == nil {
-			message.ID = id
+		if len(messageFields[1]) == 0 {
+			continue
 		}
+
+		message.NetType = messageFields[0]
+		message.ID = messageFields[1]
+		message.MessageType = messageFields[3]
+		message.ReceiveTime = time.Now()
 
 		switch message.MessageType {
 		case LK:

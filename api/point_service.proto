@@ -16,14 +16,14 @@ service routePoint {
 
 message Identifier {
     int32 version = 1;
-    int32 clientId = 2;
+    string clientId = 2;
 }
 
 message Point {
     fixed32 version = 1;
     string messageType = 2;
     string netType = 3;
-    fixed32 deviceId = 4;
+    string deviceId = 4;
     fixed32 batteryPercent = 5;
     int64 receiveTime = 6;
     int64 deviceTime = 7;

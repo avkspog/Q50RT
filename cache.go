@@ -8,7 +8,7 @@ import (
 
 type Cache struct {
 	mu          *sync.RWMutex
-	Items       map[int]Item
+	Items       map[string]Item
 	stopCleaner chan struct{}
 }
 
@@ -25,7 +25,7 @@ const (
 func NewCache() *Cache {
 	cache := &Cache{
 		mu:          &sync.RWMutex{},
-		Items:       make(map[int]Item),
+		Items:       make(map[string]Item),
 		stopCleaner: make(chan struct{}),
 	}
 
@@ -35,15 +35,15 @@ func NewCache() *Cache {
 	return cache
 }
 
-func (c *Cache) Set(key int, object interface{}) {
+func (c *Cache) Set(key string, object interface{}) {
 	c.set(key, object, 0)
 }
 
-func (c *Cache) SetExp(key int, object interface{}, expiration time.Duration) {
+func (c *Cache) SetExp(key string, object interface{}, expiration time.Duration) {
 	c.set(key, object, expiration)
 }
 
-func (c *Cache) set(key int, object interface{}, expiration time.Duration) {
+func (c *Cache) set(key string, object interface{}, expiration time.Duration) {
 	var exp time.Duration
 
 	if expiration == 0 {
@@ -62,7 +62,7 @@ func (c *Cache) set(key int, object interface{}, expiration time.Duration) {
 	c.mu.Unlock()
 }
 
-func (c *Cache) Get(key int) (interface{}, bool) {
+func (c *Cache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	item, found := c.Items[key]
 	if !found {
@@ -79,7 +79,7 @@ func (c *Cache) Get(key int) (interface{}, bool) {
 	return item.Value, true
 }
 
-func (c *Cache) Delete(key int) {
+func (c *Cache) Delete(key string) {
 	c.mu.Lock()
 	_, found := c.Items[key]
 	if found {

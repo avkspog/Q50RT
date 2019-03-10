@@ -5,6 +5,7 @@ import (
 	ps "Q50RT/q50"
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -34,6 +35,10 @@ func (s *APIServer) LastPoint(ctx context.Context, idn *pb.Identifier) (*pb.Poin
 		return &pb.Point{}, errors.New("Invalid client id")
 	}
 
+	if s.protocolVersion != idn.Version {
+		return &pb.Point{}, fmt.Errorf("Protocol version %s not support", idn.Version)
+	}
+
 	msg, ok := LocalCache.Get(idn.ClientId)
 	if !ok {
 		return &pb.Point{}, nil
@@ -45,7 +50,7 @@ func (s *APIServer) LastPoint(ctx context.Context, idn *pb.Identifier) (*pb.Poin
 	}
 
 	point := &pb.Point{
-		Version:        1,
+		Version:        s.protocolVersion,
 		MessageType:    message.MessageType,
 		NetType:        message.NetType,
 		DeviceId:       message.ID,
@@ -76,7 +81,10 @@ func createAPIServer(c *ServerConfig) *APIServer {
 }
 
 func StartAPIServer(c *ServerConfig, wg *sync.WaitGroup) {
-	defer wg.Done()
+	defer func() {
+		wg.Done()
+		log.Println("Q50Watch api server stopped")
+	}()
 
 	s := createAPIServer(c)
 
@@ -99,6 +107,5 @@ func StartAPIServer(c *ServerConfig, wg *sync.WaitGroup) {
 }
 
 func (s *APIServer) Shutdown() {
-	log.Println("Q50Watch api server stopped")
 	s.server.Stop()
 }

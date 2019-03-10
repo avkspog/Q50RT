@@ -15,12 +15,12 @@ service routePoint {
 }
 
 message Identifier {
-    int32 version = 1;
+    string version = 1;
     string clientId = 2;
 }
 
 message Point {
-    fixed32 version = 1;
+    string version = 1;
     string messageType = 2;
     string netType = 3;
     string deviceId = 4;
@@ -32,12 +32,12 @@ message Point {
 }
 
 message ServerCommand {
-    fixed32 version = 1;
+    string version = 1;
     string command = 2;
 }
 
 message ServerResponse {
-    fixed32 version = 1;
+    string version = 1;
 
     message Statistic {
         string type = 2;

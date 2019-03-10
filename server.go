@@ -81,6 +81,7 @@ func process(data *[]byte) {
 		LocalCache.Set(message.ID, message)
 	}
 
+	//Debug info
 	log.Println(len(LocalCache.Items))
 	for k, v := range LocalCache.Items {
 		msg := v.Value.(*q50.Message)

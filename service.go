@@ -28,24 +28,29 @@ func (s *APIServer) Ping(ctx context.Context, ping *pb.PingCommand) (*pb.PingCom
 
 func (s *APIServer) LastPoint(ctx context.Context, idn *pb.Identifier) (*pb.Point, error) {
 	if idn == nil {
+		log.Println("Empty client identifier")
 		return &pb.Point{}, errors.New("Empty client identifier")
 	}
 
 	if len(idn.ClientId) == 0 {
+		log.Println("Invalid client id")
 		return &pb.Point{}, errors.New("Invalid client id")
 	}
 
 	if s.protocolVersion != idn.Version {
+		log.Printf("Protocol version %s not support", idn.Version)
 		return &pb.Point{}, fmt.Errorf("Protocol version %s not support", idn.Version)
 	}
 
 	msg, ok := LocalCache.Get(idn.ClientId)
-	if !ok {
+	if !ok || msg == nil {
+		log.Printf("%s not contains in cache", idn.ClientId)
 		return &pb.Point{}, nil
 	}
 
 	message, ok := msg.(ps.Message)
 	if !ok {
+		log.Println("message cast error")
 		return &pb.Point{}, nil
 	}
 
@@ -69,15 +74,14 @@ func (s *APIServer) ServerStatistic(ctx context.Context, command *pb.ServerComma
 }
 
 func createAPIServer(c *ServerConfig) *APIServer {
-	apis := &APIServer{
+	apiServ := &APIServer{
 		protocolVersion: serverConfig.ProtocolVersion,
 		address:         c.APIAddr(),
 		server:          grpc.NewServer(),
 	}
 
-	pb.RegisterRoutePointServer(apis.server, apis)
-
-	return apis
+	pb.RegisterRoutePointServer(apiServ.server, apiServ)
+	return apiServ
 }
 
 func StartAPIServer(c *ServerConfig, wg *sync.WaitGroup) {

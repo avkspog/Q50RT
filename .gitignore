@@ -1,5 +1,7 @@
 *.txt
 .doc/
+.idea/
 .vscode/
 *.exe
 debug
+*.log
